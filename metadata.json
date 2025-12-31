@@ -1,0 +1,5 @@
+{
+  "name": "Loan Digital Twin Compiler",
+  "description": "An agent-native system that instantiates loan agreements as computable digital twins, enforcing structural consistency and auditability for loan market professionals.",
+  "requestFramePermissions": []
+}
