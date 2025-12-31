@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { AgentLog, LintFinding, AgentStatus, AgentType, Severity } from '../types';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 
 const AgentPanel: React.FC<Props> = ({ logs, findings, onApplyPatch, onUploadChangeInstruction, patchingId, isMaximized, onToggleMaximize }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedFindingId, setExpandedFindingId] = useState<string | null>(null);
 
   const getStatusColor = (status: AgentStatus) => {
       switch(status) {
@@ -39,10 +40,14 @@ const AgentPanel: React.FC<Props> = ({ logs, findings, onApplyPatch, onUploadCha
     URL.revokeObjectURL(url);
   };
 
+  const toggleFinding = (id: string) => {
+      setExpandedFindingId(prev => prev === id ? null : id);
+  };
+
   return (
-    <div className="h-full bg-slate-50 flex flex-col">
+    <div className="h-full bg-slate-50 flex flex-col min-h-0">
       {/* Action / Input Area */}
-      <div className="p-4 bg-white border-b border-slate-200">
+      <div className="p-4 bg-white border-b border-slate-200 shrink-0">
         <div className="flex justify-between items-center mb-2">
             <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Intent & Instructions</h3>
             <button
@@ -91,7 +96,7 @@ const AgentPanel: React.FC<Props> = ({ logs, findings, onApplyPatch, onUploadCha
       </div>
 
       {/* Agent Timeline */}
-      <div className="h-1/3 border-b border-slate-200 flex flex-col min-h-[150px]">
+      <div className="h-1/3 border-b border-slate-200 flex flex-col min-h-[150px] shrink-0">
         <div className="p-2 bg-slate-50 border-b border-slate-200">
              <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Agent Operations</h3>
         </div>
@@ -114,8 +119,8 @@ const AgentPanel: React.FC<Props> = ({ logs, findings, onApplyPatch, onUploadCha
       </div>
 
       {/* Issues / Linting */}
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="p-3 bg-white border-b border-slate-200 flex justify-between items-center">
+      <div className="flex-1 flex flex-col bg-white min-h-0">
+        <div className="p-3 bg-white border-b border-slate-200 flex justify-between items-center shrink-0">
              <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Active Findings</h3>
              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-bold">{findings.length}</span>
         </div>
@@ -126,30 +131,43 @@ const AgentPanel: React.FC<Props> = ({ logs, findings, onApplyPatch, onUploadCha
                     <p className="text-sm text-slate-500">System Clean. No inconsistencies detected.</p>
                 </div>
             ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 pb-20">
                     {findings.map(finding => {
                         const isPatchingThis = patchingId === finding.id;
                         const isSystemBusy = patchingId !== null && !isPatchingThis;
+                        const isExpanded = expandedFindingId === finding.id;
                         
                         return (
                         <div key={finding.id} className="p-4 hover:bg-red-50 transition-colors">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${finding.severity === Severity.CRITICAL ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                    {finding.severity}
-                                </span>
+                            <div className="flex justify-between items-start mb-2 cursor-pointer" onClick={() => toggleFinding(finding.id)}>
+                                <div className="flex gap-2 items-center">
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${finding.severity === Severity.CRITICAL ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                        {finding.severity}
+                                    </span>
+                                    {isExpanded ? (
+                                        <svg className="w-3 h-3 text-slate-400 transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    ) : (
+                                        <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                    )}
+                                </div>
                                 <span className="text-xs font-mono text-slate-400 truncate max-w-[150px]">{finding.affectedClauseId}</span>
                             </div>
-                            <p className="text-sm text-slate-800 font-medium mb-2">{finding.message}</p>
-                            {finding.suggestion && (
-                                <div className="bg-slate-50 p-2 rounded border border-slate-200 mb-3">
+                            
+                            <p className="text-sm text-slate-800 font-medium mb-2 cursor-pointer" onClick={() => toggleFinding(finding.id)}>
+                                {finding.message}
+                            </p>
+                            
+                            {isExpanded && finding.suggestion && (
+                                <div className="bg-slate-50 p-3 rounded border border-slate-200 mb-3 animate-fadeIn">
                                     <p className="text-xs text-slate-500 uppercase font-bold mb-1">Agent Suggestion</p>
-                                    <p className="text-xs text-slate-700 italic">"{finding.suggestion}"</p>
+                                    <p className="text-xs text-slate-700 italic leading-relaxed">"{finding.suggestion}"</p>
                                 </div>
                             )}
+
                             <button 
                                 onClick={() => onApplyPatch(finding.id)}
                                 disabled={isPatchingThis || isSystemBusy}
-                                className={`w-full py-1.5 border text-xs font-medium rounded transition-all flex items-center justify-center gap-2 group
+                                className={`w-full py-1.5 border text-xs font-medium rounded transition-all flex items-center justify-center gap-2 group mt-2
                                     ${isPatchingThis 
                                         ? 'bg-blue-50 border-blue-200 text-blue-700 cursor-wait' 
                                         : isSystemBusy

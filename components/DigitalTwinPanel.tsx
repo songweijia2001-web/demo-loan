@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DealState, Facility, Covenant, Definition } from '../types';
 
 interface Props {
@@ -10,6 +10,30 @@ interface Props {
 }
 
 const DigitalTwinPanel: React.FC<Props> = ({ data, onSelectCitation, isLoading, isMaximized, onToggleMaximize }) => {
+  // --- Loading Animation State ---
+  const [loadingStep, setLoadingStep] = useState(0);
+  
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingStep(0);
+      return;
+    }
+    const steps = [
+        "Reading Legal Text...",
+        "Tokenizing Clauses...",
+        "Identifying Defined Terms...",
+        "Mapping Covenants...",
+        "Validating Capital Structure...",
+        "Finalizing Digital Twin..."
+    ];
+    
+    const interval = setInterval(() => {
+        setLoadingStep(prev => (prev + 1) % steps.length);
+    }, 800); // Change text every 800ms to keep user engaged
+
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const handleDownloadJson = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!data) return;
@@ -23,17 +47,37 @@ const DigitalTwinPanel: React.FC<Props> = ({ data, onSelectCitation, isLoading, 
   };
 
   if (isLoading) {
+    const steps = [
+        "Reading Legal Text...",
+        "Tokenizing Clauses...",
+        "Identifying Defined Terms...",
+        "Mapping Covenants...",
+        "Validating Capital Structure...",
+        "Finalizing Digital Twin..."
+    ];
+    
     return (
-      <div className="flex items-center justify-center h-full text-slate-400 animate-pulse bg-white border-r border-slate-200">
-        Instantiating Digital Twin...
+      <div className="flex flex-col items-center justify-center h-full bg-slate-50 border-r border-slate-200 p-8 font-mono">
+        <div className="w-12 h-12 mb-6 relative">
+             <div className="absolute inset-0 border-4 border-slate-200 rounded-full"></div>
+             <div className="absolute inset-0 border-4 border-t-blue-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+        </div>
+        <div className="text-sm font-bold text-slate-700 mb-2 uppercase tracking-widest">Compiler Running</div>
+        <div className="text-xs text-slate-500 h-6 text-center">
+            {steps[loadingStep]}
+        </div>
+        <div className="mt-8 w-48 h-1 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-full bg-blue-500 animate-progress-indeterminate"></div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-400 bg-white border-r border-slate-200">
-        No Agreement Loaded
+      <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-white border-r border-slate-200">
+        <svg className="w-12 h-12 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+        <span className="text-sm font-medium">No Agreement Loaded</span>
       </div>
     );
   }
