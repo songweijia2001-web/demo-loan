@@ -1,15 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { LintFinding } from '../types';
 
 interface Props {
   text: string;
   findings: LintFinding[];
   highlightedCitation: string | null;
+  patchingId: string | null;
   isMaximized: boolean;
   onToggleMaximize: () => void;
 }
 
-const ContractViewPanel: React.FC<Props> = ({ text, findings, highlightedCitation, isMaximized, onToggleMaximize }) => {
+const ContractViewPanel: React.FC<Props> = ({ text, findings, highlightedCitation, patchingId, isMaximized, onToggleMaximize }) => {
+  const [flash, setFlash] = useState(false);
+
+  // Trigger flash effect when text changes (patch applied)
+  useEffect(() => {
+    if (text) {
+        setFlash(true);
+        const t = setTimeout(() => setFlash(false), 1000);
+        return () => clearTimeout(t);
+    }
+  }, [text]);
   
   const handleDownloadDoc = () => {
       if (!text) return;
@@ -41,6 +52,9 @@ const ContractViewPanel: React.FC<Props> = ({ text, findings, highlightedCitatio
         
         // Check for lint errors in this line
         const relevantFinding = findings.find(f => line.includes(f.affectedClauseId));
+        
+        // Check if this line is being patched currently
+        const isBeingPatched = relevantFinding && patchingId === relevantFinding.id;
 
         let className = "font-serif text-sm leading-relaxed text-slate-800 mb-2 px-8";
         if (isArticle) className += " text-lg font-bold mt-6 text-slate-900 border-b border-slate-200 pb-2";
@@ -53,11 +67,33 @@ const ContractViewPanel: React.FC<Props> = ({ text, findings, highlightedCitatio
         if (relevantFinding) {
             bgClass = relevantFinding.severity === 'CRITICAL' ? "bg-red-50 border-l-4 border-red-500 pl-7" : "bg-yellow-50 border-l-4 border-yellow-500 pl-7";
         }
+        
+        // Active Patching Effect overrides other styles
+        if (isBeingPatched) {
+            bgClass = "bg-amber-50 border-l-4 border-amber-500 pl-7 animate-pulse";
+        }
 
         return (
-            <div key={idx} className={`${className} ${bgClass} transition-colors duration-300 relative group`}>
-                {line}
-                {relevantFinding && (
+            <div key={idx} className={`${className} ${bgClass} transition-all duration-300 relative group`}>
+                <div className={isBeingPatched ? "blur-[1px]" : ""}>
+                    {line}
+                </div>
+                
+                {/* Active Rewriting Overlay */}
+                {isBeingPatched && (
+                    <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                         <div className="bg-white/90 px-3 py-1 rounded-full shadow-lg border border-amber-200 flex items-center gap-2">
+                            <svg className="animate-spin h-3 w-3 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="text-xs font-bold text-amber-700 tracking-wide">AI REWRITING...</span>
+                         </div>
+                    </div>
+                )}
+
+                {/* Finding Tooltip (Only show if not currently patching) */}
+                {relevantFinding && !isBeingPatched && (
                     <div className="absolute right-2 top-0 transform translate-x-full ml-2 w-48 z-20 hidden group-hover:block">
                          <div className={`p-2 rounded shadow-lg text-xs border ${relevantFinding.severity === 'CRITICAL' ? 'bg-red-100 border-red-200 text-red-800' : 'bg-yellow-100 border-yellow-200 text-yellow-800'}`}>
                             <strong>LINT:</strong> {relevantFinding.message}
@@ -70,7 +106,10 @@ const ContractViewPanel: React.FC<Props> = ({ text, findings, highlightedCitatio
   };
 
   return (
-    <div className="h-full bg-slate-50 flex flex-col border-r border-slate-200">
+    <div className={`h-full bg-slate-50 flex flex-col border-r border-slate-200 relative`}>
+      {/* Global Success Flash Overlay */}
+      <div className={`absolute inset-0 bg-green-500/10 pointer-events-none z-50 transition-opacity duration-700 ${flash ? 'opacity-100' : 'opacity-0'}`}></div>
+
       <div className="p-3 bg-white border-b border-slate-200 flex justify-between items-center shadow-sm z-10">
         <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Document Evidence</h3>
         <div className="flex space-x-2 items-center">

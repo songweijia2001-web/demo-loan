@@ -333,6 +333,7 @@ const App: React.FC = () => {
             text={contractText} 
             findings={findings}
             highlightedCitation={highlightedCitation}
+            patchingId={patchingId}
             isMaximized={maximizedPanel === 'contract'}
             onToggleMaximize={() => toggleMaximize('contract')}
           />
